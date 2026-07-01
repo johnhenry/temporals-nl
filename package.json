@@ -1,0 +1,23 @@
+{
+  "name": "temporals-nl",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Natural-language date parsing extension for temporals.",
+  "main": "index.mjs",
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": ["temporals", "natural-language", "date", "parse", "chrono"],
+  "license": "MIT",
+  "peerDependencies": {
+    "temporals": "^0.1.0"
+  },
+  "dependencies": {
+    "temporals": "file:temporals-0.1.0.tgz",
+    "temporal-polyfill": "^1.0.1"
+  }
+}
