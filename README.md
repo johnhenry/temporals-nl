@@ -39,9 +39,6 @@ Deliberately a starter subset. Extend the small rule set in `index.mjs` as neede
 ## Run
 
 ```sh
-npm install   # installs the packed temporals tarball + temporal-polyfill
+npm install   # installs temporals + temporal-polyfill from npm
 npm test
 ```
-
-Until `temporals` is published to npm this depends on a packed tarball
-(`temporals-0.1.0.tgz`); afterwards, switch to `"temporals": "^0.1.0"`.

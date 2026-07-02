@@ -1,13 +1,16 @@
 {
   "name": "temporals-nl",
   "version": "0.0.1",
-  "private": true,
   "type": "module",
   "description": "Natural-language date parsing extension for temporals.",
   "main": "index.mjs",
   "exports": {
     ".": "./index.mjs"
   },
+  "files": [
+    "index.mjs",
+    "README.md"
+  ],
   "scripts": {
     "test": "node --test"
   },
@@ -19,11 +22,13 @@
     "chrono"
   ],
   "license": "MIT",
-  "peerDependencies": {
-    "temporals": "^0.1.0"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johnhenry/temporals-nl.git"
   },
+  "homepage": "https://github.com/johnhenry/temporals-nl#readme",
   "dependencies": {
-    "temporals": "file:temporals-0.1.0.tgz",
+    "temporals": "^0.0.1",
     "temporal-polyfill": "^1.0.1"
   }
 }
