@@ -1,0 +1,16 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "temporals-nl",
+  "entryPoints": ["index.mjs"],
+  "out": "docs",
+  "readme": "README.md",
+  "navigationLinks": {
+    "GitHub": "https://github.com/johnhenry/temporals-nl",
+    "temporals": "https://github.com/johnhenry/temporals"
+  },
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": true
+  }
+}

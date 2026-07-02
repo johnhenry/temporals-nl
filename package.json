@@ -1,6 +1,6 @@
 {
   "name": "temporals-nl",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "description": "Natural-language date parsing extension for temporals.",
   "main": "index.mjs",
@@ -12,7 +12,11 @@
     "README.md"
   ],
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "example": "node examples/basic.mjs",
+    "examples": "for f in examples/*.mjs; do echo \"# $f\"; node \"$f\" >/dev/null || exit 1; done",
+    "docs": "typedoc",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "temporals",
@@ -28,7 +32,11 @@
   },
   "homepage": "https://github.com/johnhenry/temporals-nl#readme",
   "dependencies": {
-    "temporals": "^0.0.1",
-    "temporal-polyfill": "^1.0.1"
+    "temporal-polyfill": "^1.0.1",
+    "temporals": "0.0.x"
+  },
+  "devDependencies": {
+    "typedoc": "^0.28.19",
+    "typescript": "^6.0.3"
   }
 }

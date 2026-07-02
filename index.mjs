@@ -29,9 +29,32 @@ const PERIODS = { week: "week", month: "month", year: "year" };
 const TIME_FIELDS = new Set(["hours", "minutes", "seconds"]);
 
 /**
- * @param {string} text
- * @param {{ now?: import("temporal-polyfill").Temporal.ZonedDateTime, timeZone?: string, weekStart?: string }} [opts]
- * @returns {import("temporal-polyfill").Temporal.PlainDate | import("temporal-polyfill").Temporal.ZonedDateTime | null}
+ * Parse a natural-language date/time phrase into a Temporal value.
+ *
+ * Recognised forms (case-insensitive, extra whitespace tolerated):
+ * - `today` · `tomorrow` · `yesterday` · `now`
+ * - `next|last|this <weekday>`, and a bare `<weekday>` (the next such day — today counts)
+ * - `next|last|this week|month|year` (period boundaries, via temporals' `startOf`)
+ * - `in <n> <unit>` / `in a <unit>` · `<n> <unit> ago` — units: `minute hour day week month year`
+ *
+ * @param {string} text - The phrase to parse.
+ * @param {object} [opts]
+ * @param {import("temporal-polyfill").Temporal.ZonedDateTime} [opts.now] - Reference "now"
+ *   (defaults to the current instant via `Temporal.Now`). Inject for deterministic parsing/tests.
+ * @param {string} [opts.timeZone] - IANA time zone used when `opts.now` is omitted.
+ * @param {"MO"|"TU"|"WE"|"TH"|"FR"|"SA"|"SU"} [opts.weekStart] - Week start for
+ *   "this <weekday>" and "this/next/last week" (default `"MO"`).
+ * @returns {import("temporal-polyfill").Temporal.PlainDate
+ *   | import("temporal-polyfill").Temporal.ZonedDateTime | null}
+ *   A `PlainDate` for date phrases, a `ZonedDateTime` for time-relative phrases (and `"now"`),
+ *   or `null` when the phrase isn't recognised.
+ * @example
+ * parseNatural("next monday");        // → Temporal.PlainDate
+ * parseNatural("in 2 hours");         // → Temporal.ZonedDateTime
+ * parseNatural("3 weeks ago");        // → Temporal.PlainDate
+ * parseNatural("gibberish");          // → null
+ * // Deterministic with an injected clock:
+ * parseNatural("tomorrow", { now: Temporal.Now.zonedDateTimeISO("America/New_York") });
  */
 export function parseNatural(text, opts = {}) {
   const T = globalThis.Temporal;
@@ -80,24 +103,27 @@ export function parseNatural(text, opts = {}) {
   return null;
 }
 
+/** The next date falling on weekday `dow` (1=Mon…7=Sun) at/after `date`; `inclusive` lets today count. */
 function nextWeekday(date, dow, inclusive) {
   let delta = (dow - date.dayOfWeek + 7) % 7;
   if (delta === 0 && !inclusive) delta = 7;
   return date.add({ days: delta });
 }
 
+/** The most recent date on weekday `dow` strictly before `date`. */
 function lastWeekday(date, dow) {
   let delta = (date.dayOfWeek - dow + 7) % 7;
   if (delta === 0) delta = 7;
   return date.subtract({ days: delta });
 }
 
+/** The date on weekday `dow` within `date`'s own week (week bounded by `weekStart`). */
 function thisWeekday(date, dow, weekStart = "MO") {
   const weekStartDate = startOf(date, "week", { weekStart });
   return weekStartDate.add({ days: (dow - weekStartDate.dayOfWeek + 7) % 7 });
 }
 
-// "next/last/this week|month|year" via temporals' startOf.
+/** Resolve "next|last|this <week|month|year>" to that period's start date, via temporals' `startOf`. */
 function period(mod, unit, date, weekStart = "MO") {
   const base = startOf(date, unit, { weekStart });
   const step = { [unit === "week" ? "weeks" : `${unit}s`]: 1 };
