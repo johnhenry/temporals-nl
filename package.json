@@ -1,6 +1,6 @@
 {
   "name": "temporals-nl",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "description": "Natural-language date parsing extension for temporals.",
@@ -11,7 +11,13 @@
   "scripts": {
     "test": "node --test"
   },
-  "keywords": ["temporals", "natural-language", "date", "parse", "chrono"],
+  "keywords": [
+    "temporals",
+    "natural-language",
+    "date",
+    "parse",
+    "chrono"
+  ],
   "license": "MIT",
   "peerDependencies": {
     "temporals": "^0.1.0"
