@@ -1,6 +1,6 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "name": "temporals-nl",
+  "name": "@johnhenry/temporals-nl",
   "entryPoints": ["index.mjs"],
   "out": "docs",
   "readme": "README.md",

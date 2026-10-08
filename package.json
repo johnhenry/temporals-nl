@@ -1,6 +1,6 @@
 {
-  "name": "temporals-nl",
-  "version": "0.0.2",
+  "name": "@johnhenry/temporals-nl",
+  "version": "0.1.0",
   "type": "module",
   "description": "Natural-language date parsing extension for temporals.",
   "main": "index.mjs",
@@ -32,11 +32,17 @@
   },
   "homepage": "https://github.com/johnhenry/temporals-nl#readme",
   "dependencies": {
-    "temporal-polyfill": "^1.0.1",
-    "temporals": "0.0.x"
+    "@johnhenry/temporals": "^0.1.0",
+    "temporal-polyfill": "^1.0.1"
   },
   "devDependencies": {
     "typedoc": "^0.28.19",
     "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": ">=26"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
