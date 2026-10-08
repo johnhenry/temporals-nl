@@ -1,4 +1,4 @@
-import { startOf } from "temporals";
+import { startOf } from "@johnhenry/temporals";
 
 /**
  * temporals-nl — a small natural-language date parser that **wraps** `temporals`.

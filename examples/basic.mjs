@@ -1,6 +1,6 @@
 // Runnable tour of temporals-nl.  node examples/basic.mjs
 import "temporal-polyfill/global"; // only needed on Node < 22
-import { parseNatural } from "temporals-nl";
+import { parseNatural } from "@johnhenry/temporals-nl";
 
 // A fixed reference clock makes output deterministic (2026-06-30 is a Tuesday).
 const ref = Temporal.ZonedDateTime.from("2026-06-30T09:00[America/New_York]");

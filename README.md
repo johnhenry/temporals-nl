@@ -1,7 +1,9 @@
-# temporals-nl
+# @johnhenry/temporals-nl
+
+> **Renamed.** This package was previously published as the unscoped `temporals-nl`. It is now `@johnhenry/temporals-nl` and depends on `@johnhenry/temporals`. See [Migrating from `temporals-nl`](#migrating-from-temporals-nl).
 
 Natural-language date parsing — a **separate extension** that wraps
-[`temporals`](https://github.com/johnhenry/temporals).
+[`@johnhenry/temporals`](https://github.com/johnhenry/temporals).
 
 It lives outside the core on purpose: NL parsing is fuzzy, locale-heavy, and a
 fundamentally different concern from `temporals`' deterministic time generation.
@@ -11,7 +13,7 @@ a heavier parser like `chrono`) independently.
 ## Install
 
 ```sh
-npm install temporals-nl
+npm install @johnhenry/temporals-nl
 # On Node < 22, also:
 npm install temporal-polyfill
 ```
@@ -20,7 +22,7 @@ npm install temporal-polyfill
 
 ```js
 import "temporal-polyfill/global"; // only on Node < 22
-import { parseNatural } from "temporals-nl";
+import { parseNatural } from "@johnhenry/temporals-nl";
 
 parseNatural("next monday");     // → Temporal.PlainDate
 parseNatural("in 2 hours");      // → Temporal.ZonedDateTime
@@ -73,7 +75,7 @@ This is deliberately a **starter** grammar — extend the small rule set in
 
 ## Relationship to `temporals`
 
-Depends on `temporals` (range `0.0.x`) and uses its `startOf` for period
+Depends on `@johnhenry/temporals` (range `^0.1.0`; Node >=26) and uses its `startOf` for period
 boundaries. It needs no specific `temporals` feature beyond that, so it tracks
 patch releases automatically. It is **not** a replacement for `temporals` — it's
 a thin, opinionated convenience layer on top.
@@ -81,8 +83,28 @@ a thin, opinionated convenience layer on top.
 ## Develop
 
 ```sh
-npm install        # temporals + temporal-polyfill from npm
+npm install        # @johnhenry/temporals + temporal-polyfill from npm
 npm test           # node:test suite
 npm run examples   # run examples/*.mjs
 npm run docs       # generate the TypeDoc API reference into docs/
 ```
+
+## Migrating from `temporals-nl`
+
+The unscoped `temporals-nl` package (0.0.x) is deprecated. To migrate:
+
+```sh
+npm uninstall temporals-nl temporals
+npm install @johnhenry/temporals-nl
+```
+
+and update imports:
+
+```diff
+-import { parseNatural } from "temporals-nl";
++import { parseNatural } from "@johnhenry/temporals-nl";
+```
+
+Behaviour of `parseNatural` is unchanged. Other changes: it now depends on
+`@johnhenry/temporals` `^0.1.0` (replacing the deprecated unscoped `temporals`
+`0.0.x`) and requires Node >=26, matching the rest of the family.
