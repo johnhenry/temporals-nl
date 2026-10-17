@@ -1,6 +1,6 @@
 {
   "name": "@johnhenry/temporals-nl",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Natural-language date parsing extension for temporals.",
   "main": "index.mjs",
@@ -32,7 +32,7 @@
   },
   "homepage": "https://github.com/johnhenry/temporals-nl#readme",
   "dependencies": {
-    "@johnhenry/temporals": "^0.1.0",
+    "@johnhenry/temporals": "^0.1.0 || ^0.2.0",
     "temporal-polyfill": "^1.0.1"
   },
   "devDependencies": {

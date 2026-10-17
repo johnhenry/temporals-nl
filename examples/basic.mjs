@@ -1,11 +1,11 @@
 // Runnable tour of temporals-nl.  node examples/basic.mjs
-import "temporal-polyfill/global"; // only needed on Node < 22
+import "temporal-polyfill/global"; // only needed where there is no native Temporal
 import { parseNatural } from "@johnhenry/temporals-nl";
 
 // A fixed reference clock makes output deterministic (2026-06-30 is a Tuesday).
 const ref = Temporal.ZonedDateTime.from("2026-06-30T09:00[America/New_York]");
 
-const show = (phrase) => console.log(`  ${phrase.padEnd(16)} -> ${parseNatural(phrase, { now: ref }) ?? "null"}`);
+const show = (phrase) => console.log(`  ${phrase.padEnd(18)} -> ${parseNatural(phrase, { now: ref }) ?? "null"}`);
 
 console.log("Relative to 2026-06-30 (Tuesday):");
 for (const p of [
@@ -14,6 +14,14 @@ for (const p of [
   "in 3 days", "in a week", "2 weeks ago", "in 2 hours", "30 minutes ago",
   "next week", "last month", "this year",
   "sometime soon", // unrecognised -> null
+]) {
+  show(p);
+}
+
+console.log("\nTimes of day (zone America/New_York):");
+for (const p of [
+  "9am", "9:30pm", "17:45", "noon", "midnight", "at 9",
+  "tomorrow 9am", "9am tomorrow", "next friday 3pm", "in 2 days at 9am",
 ]) {
   show(p);
 }

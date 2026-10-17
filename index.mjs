@@ -33,34 +33,134 @@ const TIME_FIELDS = new Set(["hours", "minutes", "seconds"]);
  *
  * Recognised forms (case-insensitive, extra whitespace tolerated):
  * - `today` · `tomorrow` · `yesterday` · `now`
- * - `next|last|this <weekday>`, and a bare `<weekday>` (the next such day — today counts)
+ * - `next|last|this <weekday>`, and a bare `<weekday>` (`this` and bare: the coming one, today counts;
+ *   `next`: the first one strictly after today; `last`: strictly before)
  * - `next|last|this week|month|year` (period boundaries, via temporals' `startOf`)
  * - `in <n> <unit>` / `in a <unit>` · `<n> <unit> ago` — units: `minute hour day week month year`
+ * - a time of day: `9am` · `9:30pm` · `17:45` · `9:15:30` · `noon` · `midnight` · `at 9` (an hour, 0 to 23),
+ *   with `a.m.`/`p.m.` and `@` accepted. Alone, it is its next occurrence (a time that equals `now` has
+ *   passed). With a day phrase, in either order, it sets the time on that day: `tomorrow 9am`,
+ *   `9am tomorrow`, `next friday 3pm`, `at 5pm on friday`, `in 2 days at 9am`. A time goes with
+ *   day-sized phrases, not with `now` or `in 2 hours`/`30 minutes ago` (those return `null`).
+ *
+ * A time the zone skips (02:30 when clocks go forward) lands past the jump (03:30), and one it
+ * shows twice (01:30 when clocks go back) is its first reading.
  *
  * @param {string} text - The phrase to parse.
  * @param {object} [opts]
- * @param {import("temporal-polyfill").Temporal.ZonedDateTime} [opts.now] - Reference "now"
+ * @param {import("temporal-polyfill").Temporal.ZonedDateTime
+ *   | import("temporal-polyfill").Temporal.Instant | Date | number} [opts.now] - Reference "now"
  *   (defaults to the current instant via `Temporal.Now`). Inject for deterministic parsing/tests.
- * @param {string} [opts.timeZone] - IANA time zone used when `opts.now` is omitted.
- * @param {"MO"|"TU"|"WE"|"TH"|"FR"|"SA"|"SU"} [opts.weekStart] - Week start for
- *   "this <weekday>" and "this/next/last week" (default `"MO"`).
+ *   An `Instant`, a `Date` or epoch milliseconds is read in `opts.zone` (default: the system zone).
+ * @param {string} [opts.zone] - IANA time zone the wall clock means ("9am", "today" are in this zone).
+ *   A `ZonedDateTime` `now` is moved into it; without it, `now`'s own zone is used.
+ * @param {string} [opts.timeZone] - Older spelling of `zone`, honoured only when `opts.zone` is absent
+ *   and `opts.now` has no zone of its own.
+ * @param {"MO"|"TU"|"WE"|"TH"|"FR"|"SA"|"SU"|0|1|2|3|4|5|6|7} [opts.weekStart] - Week start for
+ *   "this/next/last week" (default `"MO"`). A number is 1 = Monday … 6 = Saturday, 0 or 7 = Sunday.
  * @returns {import("temporal-polyfill").Temporal.PlainDate
  *   | import("temporal-polyfill").Temporal.ZonedDateTime | null}
- *   A `PlainDate` for date phrases, a `ZonedDateTime` for time-relative phrases (and `"now"`),
- *   or `null` when the phrase isn't recognised.
+ *   A `PlainDate` for date phrases, a `ZonedDateTime` for phrases with a time of day, time-relative
+ *   phrases (and `"now"`), or `null` when the phrase isn't recognised.
+ * @throws {RangeError} when `opts.zone` isn't a time zone.
  * @example
  * parseNatural("next monday");        // → Temporal.PlainDate
  * parseNatural("in 2 hours");         // → Temporal.ZonedDateTime
  * parseNatural("3 weeks ago");        // → Temporal.PlainDate
  * parseNatural("gibberish");          // → null
+ * parseNatural("next friday 3pm", { zone: "Europe/Paris" });   // → Temporal.ZonedDateTime
  * // Deterministic with an injected clock:
  * parseNatural("tomorrow", { now: Temporal.Now.zonedDateTimeISO("America/New_York") });
  */
 export function parseNatural(text, opts = {}) {
-  const T = globalThis.Temporal;
-  const now = opts.now ?? T.Now.zonedDateTimeISO(opts.timeZone);
-  const date = typeof now.toPlainDate === "function" ? now.toPlainDate() : now;
+  if (typeof text !== "string") return null;
+  const now = reference(opts);
+  const weekStart = weekStartOf(opts.weekStart);
   const s = text.trim().toLowerCase().replace(/\s+/g, " ");
+
+  const taken = takeTime(s);
+  if (taken.bad) return null;
+  if (!taken.time) return parseDate(s.replace(LEAD, ""), now, weekStart);
+
+  // A time of day: alone, or on the day the rest of the phrase names.
+  if (!now.timeZoneId) return null; // a PlainDate reference has no clock
+  const { time, rest } = taken;
+  if (rest === "") {
+    // the next time the clock shows it; exactly now has passed
+    const today = now.toPlainDate();
+    const first = atTime(today, time, now);
+    return first.epochNanoseconds > now.epochNanoseconds ? first : atTime(today.add({ days: 1 }), time, now);
+  }
+  const day = parseDate(rest, now, weekStart);
+  if (!day || day.hour !== undefined) return null; // not a day, or an instant ("in 2 hours", "now")
+  return atTime(day, time, now);
+}
+
+/** A date at a time of day in `now`'s zone (a skipped time lands past the jump, a repeated one is the first). */
+function atTime(date, time, now) {
+  return date.toZonedDateTime({ timeZone: now.timeZoneId, plainTime: time });
+}
+
+const LEAD = /^(?:(?:on|the) )+/;
+const MERIDIEM = "(am|pm|a\\.m\\.|p\\.m\\.)";
+const CLOCK = new RegExp(`(?:^|\\s)(?:(?:at|@)\\s*)?(noon|midnight|(\\d{1,2}):(\\d{2})(?::(\\d{2}))?\\s*${MERIDIEM}?|(\\d{1,2})\\s*${MERIDIEM})(?=$|\\s)`);
+const BARE_HOUR = /(?:^|\s)(?:at|@)\s*(\d{1,2})(?=$|\s)/;
+const tidy = (s) =>
+  s.replace(/\s+/g, " ").trim().replace(/^(?:(?:at|on|of|the|@) )+/, "").replace(/(?: (?:at|on|of|the|@))+$/, "").trim();
+
+/**
+ * Take the time of day out of `s`: `{ time: { hour, minute, second }, rest }` (rest: what is left),
+ * `{ time: null }` when there is none, or `{ bad: true }` when it is written like one but isn't (25:00, 13pm).
+ */
+function takeTime(s) {
+  let m = CLOCK.exec(s);
+  let time;
+  if (m) {
+    if (m[1] === "noon") time = { hour: 12, minute: 0, second: 0 };
+    else if (m[1] === "midnight") time = { hour: 0, minute: 0, second: 0 };
+    else {
+      const meridiem = m[5] ?? m[7];
+      let hour = Number(m[2] ?? m[6]);
+      const minute = m[2] !== undefined ? Number(m[3]) : 0;
+      const second = m[4] !== undefined ? Number(m[4]) : 0;
+      if (meridiem) {
+        if (hour < 1 || hour > 12) return { bad: true };
+        hour = (hour % 12) + (meridiem[0] === "p" ? 12 : 0);
+      } else if (hour > 23) return { bad: true };
+      if (minute > 59 || second > 59) return { bad: true };
+      time = { hour, minute, second };
+    }
+  } else if ((m = BARE_HOUR.exec(s))) {
+    const hour = Number(m[1]);
+    if (hour > 23) return { bad: true };
+    time = { hour, minute: 0, second: 0 };
+  } else {
+    return { time: null };
+  }
+  return { time, rest: tidy(s.slice(0, m.index) + " " + s.slice(m.index + m[0].length)) };
+}
+
+const WEEK_STARTS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+/** "MO"…"SU" as is; 1…6 Monday…Saturday, 0 or 7 Sunday. */
+function weekStartOf(weekStart) {
+  if (Number.isInteger(weekStart) && weekStart >= 0 && weekStart <= 7) return WEEK_STARTS[weekStart % 7];
+  return weekStart;
+}
+
+/** The reference clock as a ZonedDateTime (or, when a PlainDate is passed, the date itself). */
+function reference({ now, zone, timeZone } = {}) {
+  const T = globalThis.Temporal;
+  if (now === undefined || now === null) return T.Now.zonedDateTimeISO(zone ?? timeZone);
+  const fallback = () => zone ?? timeZone ?? T.Now.zonedDateTimeISO().timeZoneId;
+  if (typeof now === "number" || now instanceof Date) return T.Instant.fromEpochMilliseconds(+now).toZonedDateTimeISO(fallback());
+  if (typeof now.toZonedDateTimeISO === "function") return now.toZonedDateTimeISO(fallback()); // an Instant
+  if (zone && typeof now.withTimeZone === "function") return now.withTimeZone(zone);
+  return now;
+}
+
+/** A day or relative phrase (no time of day): a PlainDate, a ZonedDateTime, or null. */
+function parseDate(s, now, weekStart) {
+  const date = typeof now.toPlainDate === "function" ? now.toPlainDate() : now;
 
   if (s === "today") return date;
   if (s === "tomorrow") return date.add({ days: 1 });
@@ -72,12 +172,12 @@ export function parseNatural(text, opts = {}) {
   // next / last / this  <weekday | week|month|year>
   if ((m = /^(next|last|this) (\w+)$/.exec(s))) {
     const [, mod, word] = m;
-    if (PERIODS[word]) return period(mod, PERIODS[word], date, opts.weekStart);
+    if (PERIODS[word]) return period(mod, PERIODS[word], date, weekStart);
     const dow = WEEKDAYS[word];
     if (!dow) return null;
     if (mod === "next") return nextWeekday(date, dow, false);
     if (mod === "last") return lastWeekday(date, dow);
-    return thisWeekday(date, dow, opts.weekStart); // "this"
+    return nextWeekday(date, dow, true); // "this": the coming one, today counts
   }
 
   // bare weekday → the next such day (today counts)
@@ -115,12 +215,6 @@ function lastWeekday(date, dow) {
   let delta = (date.dayOfWeek - dow + 7) % 7;
   if (delta === 0) delta = 7;
   return date.subtract({ days: delta });
-}
-
-/** The date on weekday `dow` within `date`'s own week (week bounded by `weekStart`). */
-function thisWeekday(date, dow, weekStart = "MO") {
-  const weekStartDate = startOf(date, "week", { weekStart });
-  return weekStartDate.add({ days: (dow - weekStartDate.dayOfWeek + 7) % 7 });
 }
 
 /** Resolve "next|last|this <week|month|year>" to that period's start date, via temporals' `startOf`. */
